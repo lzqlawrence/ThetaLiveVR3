@@ -78,25 +78,30 @@ public class CaptureThetaCamera : MonoBehaviour
 
 	void Start ()
 	{
-		renderTex.width = SCREEN_WIDTH;
-		renderTex.height = SCREEN_HEIGHT;
-		Screen.SetResolution(SCREEN_WIDTH, SCREEN_HEIGHT, false);
-
-		jsonfileKeys = new JsonFileKeys();
-		////Unity5.3からJSONも標準で使える！.
-		//TextAsset textdata = Resources.Load("Setting") as TextAsset;
-		//jsonfileKeys = JsonUtility.FromJson<JsonFileKeys>(textdata.text);
-
-		//RenderTextureと画面解像度を指定サイズに合わせる.
-		//renderTex.width = jsonfileKeys.SCREEN_WIDTH;
-		//renderTex.height = jsonfileKeys.SCREEN_HEIGHT;
-		//Screen.SetResolution(jsonfileKeys.SCREEN_WIDTH, jsonfileKeys.SCREEN_HEIGHT, false);
-		liveIconImage.gameObject.SetActive(false);
-
 		//カレントフォルダを取得.
 		currentPath = Directory.GetCurrentDirectory();
 		currentPath = currentPath.Replace("/", "\\\\");
 		Debug.Log(currentPath);
+
+
+		//renderTex.width = SCREEN_WIDTH;
+		//renderTex.height = SCREEN_HEIGHT;
+		//Screen.SetResolution(SCREEN_WIDTH, SCREEN_HEIGHT, false);
+
+
+		System.IO.StreamReader reader = new System.IO.StreamReader(currentPath + "\\" + "Setting.json", System.Text.Encoding.GetEncoding("utf-8"));
+		string textData = reader.ReadToEnd();
+		reader.Close();
+		Debug.Log(textData);
+
+		jsonfileKeys = new JsonFileKeys();
+		jsonfileKeys = JsonUtility.FromJson<JsonFileKeys>(textData);
+
+		//RenderTextureと画面解像度を指定サイズに合わせる.
+		renderTex.width = jsonfileKeys.SCREEN_WIDTH;
+		renderTex.height = jsonfileKeys.SCREEN_HEIGHT;
+		Screen.SetResolution(jsonfileKeys.SCREEN_WIDTH, jsonfileKeys.SCREEN_HEIGHT, false);
+		liveIconImage.gameObject.SetActive(false);
 		
 		//外部通信用のパイプを作成.
 		int result = InitNamedPipe();
