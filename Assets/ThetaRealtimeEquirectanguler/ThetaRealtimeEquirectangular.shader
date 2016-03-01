@@ -6,7 +6,9 @@ Shader "Theta/RealtimeEquirectangular"
 	Properties
 	{
 		[NoScaleOffset] _MainTex("Texture", 2D) = "white" {}
+        
 		_Radius("Radius", Float) = 0.445 // Preset for Theta S
+
 		_UVOffset("UVOffset(Forward UV / Backward UV)", Vector) = (0.0, 0.0, 0.0, 0.0)
 
 		[KeywordEnum(Theta S, Theta)] _Mode("Mode", Int) = 0
@@ -29,8 +31,10 @@ Shader "Theta/RealtimeEquirectangular"
 			#pragma multi_compile _MODE_THETA_S _MODE_THETA
 			#pragma multi_compile _DRAW_BOTH _DRAW_FORWARD _DRAW_BACKWARD
 			#pragma glsl
+            #pragma target 3.0
+
 			#include "UnityCG.cginc"
-			
+            
 
 			struct appdata
 			{
@@ -45,12 +49,17 @@ Shader "Theta/RealtimeEquirectangular"
 			};
 
 			sampler2D _MainTex;
+            float _isHD;
+            float _CamWidth;
+            float _CamHeight;
 			float _Radius;
 			float4 _UVOffset;
 
 			// Supports 1280x720 or 1920x1080
 			#define _THETA_S_Y_OFST		((720.0 - 640.0) / 720.0)
 			#define _THETA_S_Y_SCALE	(640.0 / 720.0)
+            #define _THETA_S_Y_OFST_HD		((1080.0 - 960.0) / 1080.0)
+            #define _THETA_S_Y_SCALE_HD	(960.0 / 1080.0)
 
 			v2f vert (appdata v)
 			{
@@ -105,9 +114,15 @@ Shader "Theta/RealtimeEquirectangular"
 				}
 				#endif
 
-				#if defined(_MODE_THETA_S)
-				st.y = st.y * _THETA_S_Y_SCALE + _THETA_S_Y_OFST;
-				#endif
+                if (_isHD == 1.0)
+                {
+                    st.y = st.y * _THETA_S_Y_SCALE_HD + _THETA_S_Y_OFST_HD;
+                }
+                else
+                {
+                    st.y = st.y * _THETA_S_Y_SCALE + _THETA_S_Y_OFST;
+                }
+                //st.y = st.y * ((_CamWidth / 2.0) / _CamHeight) + ((_CamHeight - (_CamWidth / 2.0)) / _CamHeight)
 
 				#if defined(_DRAW_BOTH)
 				#if !defined(SHADER_API_OPENGL)

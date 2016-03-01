@@ -1,7 +1,16 @@
 {
+    "DEBUG": true,
+    "HD": false,
     "FPS": 30,
-    "SCREEN_WIDTH": 2048,
-    "SCREEN_HEIGHT": 1024,
-    "CAMERA_DEVICES_FILENAME": "CameraDevices.txt",
-    "BATCH_FILENAME": "ffmpeg.bat"
+    "SCREEN_WIDTH": 1600,
+    "SCREEN_HEIGHT": 800,
+    "SHADER": [
+        0.4449999928474426,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+    ],
+    "BATCH_FILENAME": "ffmpeg.bat",
+    "CAMERA_DEVICES_FILENAME": "CameraDevices.txt"
 }

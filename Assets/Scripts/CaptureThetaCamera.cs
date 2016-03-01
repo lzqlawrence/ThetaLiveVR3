@@ -32,12 +32,9 @@ public class CaptureThetaCamera : MonoBehaviour
 	
 
 	//-------------------------------
-	// 内部用定数(iniから変更可能).
+	// 外部ファイルから入力.
 	//-------------------------------
-	[SerializeField]
-	JsonFileKeys jsonfileKeys;
-	const int SCREEN_WIDTH = 2048;
-	const int SCREEN_HEIGHT = 1024;
+	[SerializeField] JsonFileKeys jsonfileKeys;
 
 	//-------------------------------
 	// インスペクタから設定.
@@ -54,10 +51,22 @@ public class CaptureThetaCamera : MonoBehaviour
 	[SerializeField]
 	Image		liveIconImage;
 
+	[SerializeField]
+	MeshRenderer meshRenderer;
+
+	[SerializeField]
+	Material	HD_Shader;
+
+	[SerializeField]
+	Material	USB_Shader;
+
+	[SerializeField]
+	DebugObject debugObject;
+
 	//-------------------------------
 	// キャッシュ.
 	//-------------------------------
-	IniFile ini;
+	
 	Texture2D tex;
 	Rect rect;
 
@@ -74,25 +83,24 @@ public class CaptureThetaCamera : MonoBehaviour
 	static bool		isFinish	= false;
 	static bool		isFinishThread = false;
 
+	static string g_batchFilename = string.Empty;
+	static string g_cameraDevicesFilename = string.Empty;
+
 	Thread thread2;
 
 	void Start ()
 	{
+		liveIconImage.gameObject.SetActive(false);
+
 		//カレントフォルダを取得.
 		currentPath = Directory.GetCurrentDirectory();
 		currentPath = currentPath.Replace("/", "\\\\");
 		Debug.Log(currentPath);
 
-
-		//renderTex.width = SCREEN_WIDTH;
-		//renderTex.height = SCREEN_HEIGHT;
-		//Screen.SetResolution(SCREEN_WIDTH, SCREEN_HEIGHT, false);
-
-
 		System.IO.StreamReader reader = new System.IO.StreamReader(currentPath + "\\" + "Setting.json", System.Text.Encoding.GetEncoding("utf-8"));
 		string textData = reader.ReadToEnd();
 		reader.Close();
-		Debug.Log(textData);
+		Debug.Log("json reader string:" + textData);
 
 		jsonfileKeys = new JsonFileKeys();
 		jsonfileKeys = JsonUtility.FromJson<JsonFileKeys>(textData);
@@ -101,8 +109,28 @@ public class CaptureThetaCamera : MonoBehaviour
 		renderTex.width = jsonfileKeys.SCREEN_WIDTH;
 		renderTex.height = jsonfileKeys.SCREEN_HEIGHT;
 		Screen.SetResolution(jsonfileKeys.SCREEN_WIDTH, jsonfileKeys.SCREEN_HEIGHT, false);
-		liveIconImage.gameObject.SetActive(false);
-		
+
+		g_batchFilename = jsonfileKeys.BATCH_FILENAME;
+		g_cameraDevicesFilename = jsonfileKeys.CAMERA_DEVICES_FILENAME;
+		debugObject.gameObject.SetActive(jsonfileKeys.DEBUG);
+
+		if (jsonfileKeys.DEBUG)
+			debugObject.SetSlilerValue(jsonfileKeys.SHADER[0], jsonfileKeys.SHADER[1], jsonfileKeys.SHADER[2], jsonfileKeys.SHADER[3], jsonfileKeys.SHADER[4]);
+
+		//シェーダの画面解像度対応
+		if (jsonfileKeys.HD)
+		{
+			meshRenderer.material = HD_Shader;
+			meshRenderer.material.SetFloat("_Radius", jsonfileKeys.SHADER[0]);
+			meshRenderer.material.SetVector("_UVOffset", new Vector4(jsonfileKeys.SHADER[1], jsonfileKeys.SHADER[2], jsonfileKeys.SHADER[3], jsonfileKeys.SHADER[4]));
+		}
+		else
+		{
+			meshRenderer.material = USB_Shader;
+		}
+
+		Debug.Log("material name = " + meshRenderer.material.name);
+
 		//外部通信用のパイプを作成.
 		int result = InitNamedPipe();
 		initResult = "init():" + ((result == 1) ? "OK" : "NG");
@@ -119,7 +147,6 @@ public class CaptureThetaCamera : MonoBehaviour
 			label.text = initResult + "\nパイプの作成に失敗しました。\n3秒後にアプリを終了します。\n\nまた、UnityEditerの方も含めて、\n多重起動はしないで下さい。";
 			StartCoroutine(EndRoutine(3f));
 		}
-			
 	}
 
 	/// <summary>
@@ -158,6 +185,7 @@ public class CaptureThetaCamera : MonoBehaviour
 			}
 
 			//カメラアスペクト比を2:1とする.
+			//float webcamAspect = (float)jsonfileKeys.SCREEN_WIDTH / jsonfileKeys.SCREEN_HEIGHT;
 			float webcamAspect = 2f / 1f;
 
 			float height = 2f * mainCamera.orthographicSize;
@@ -251,7 +279,7 @@ public class CaptureThetaCamera : MonoBehaviour
 			string targetDir = currentPath;
 			exProcess = new System.Diagnostics.Process();
 			exProcess.StartInfo.WorkingDirectory = targetDir;
-			exProcess.StartInfo.FileName = JsonFileKeys.BATCH_FILENAME;
+			exProcess.StartInfo.FileName = g_batchFilename;
 			exProcess.StartInfo.CreateNoWindow = true;
 			//exProcess.
             exProcess.Start();
@@ -342,7 +370,7 @@ public class CaptureThetaCamera : MonoBehaviour
 	{
 		//テキストファイルから対応デバイス名を取得.
 		List<string> deviceNameList = new List<string>();
-		StreamReader file = new StreamReader(currentPath + "\\" + JsonFileKeys.CAMERA_DEVICES_FILENAME);
+		StreamReader file = new StreamReader(currentPath + "\\" + g_cameraDevicesFilename);
 
 		while (file.Peek() > -1)
 		{
@@ -356,9 +384,15 @@ public class CaptureThetaCamera : MonoBehaviour
 		foreach (string name in deviceNameList)
 		{
 			deviceNumber = device.FindIndex(d => d.name == name);
-			if (deviceNumber != -1) break;
+			if (deviceNumber != -1)
+			{
+				Debug.Log("読み取りを許可したカメラ:" + name);
+                break;
+			}
 		}
-		return deviceNumber;
+		
+		Debug.Log("deviceNumber:" + deviceNumber);
+        return deviceNumber;
 	}
 
 	/// <summary>
